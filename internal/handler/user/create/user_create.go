@@ -17,12 +17,7 @@ type Request struct {
 }
 
 type Response struct {
-	Name        string `json:"name"`
-	Surname     string `json:"surname"`
-	Patronymic  string `json:"patronymic"`
-	Age         int    `json:"age"`
-	Gender      string `json:"gender"`
-	Nationality string `json:"nationality"`
+	Id int64 `json:"id"`
 	response.Response
 }
 
@@ -46,16 +41,16 @@ type NationalityResponse struct {
 }
 
 type CountryDetail struct {
-	//NationalityMap map[string]float64 `json:"nationality_map"`
 	CountryID   string  `json:"country_id"`
 	Probability float64 `json:"probability"`
 }
 
+// todo: может быть создать структуру и записывать в нее реквесты и респорсы и передавать ее а не поля по отдельности
 type CreateUser interface {
-	CreateUser(name, surname, patronymic, nationality string, age int, gender bool) (int64, error)
+	CreateUser(name, surname, patronymic, nationality, gender string, age int) (int64, error)
 }
 
-func New(log *slog.Logger) http.HandlerFunc {
+func New(log *slog.Logger, createUser CreateUser) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers/user/user_create/New"
 
@@ -111,14 +106,22 @@ func New(log *slog.Logger) http.HandlerFunc {
 			return
 		}
 
+		nationality := GetMaxProbabilityNationality(userNationality)
+
+		id, err := createUser.CreateUser(req.Name, req.Surname, req.Patronymic, nationality, userGender.Gender, userAge.Age)
+		if err != nil {
+			log.Error("failed to add user ", err)
+
+			render.JSON(w, r, "failed to add user")
+
+			return
+		}
+
+		log.Info("user added", slog.Int64("id", id))
+
 		render.JSON(w, r, Response{
-			Name:        req.Name,
-			Surname:     req.Surname,
-			Patronymic:  req.Patronymic,
-			Age:         userAge.Age,
-			Gender:      userGender.Gender,
-			Nationality: GetMaxProbabilityNationality(userNationality),
-			Response:    response.OK(),
+			Id:       id,
+			Response: response.OK(),
 		})
 	}
 }
