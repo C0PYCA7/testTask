@@ -85,7 +85,7 @@ func (d *Database) UpdateUser(id int64, request update.Request) (int64, error) {
 
 func (d *Database) GetUsers(filter models.Filter, pageSize, page int) ([]User, error) {
 	var users []User
-	err := d.db.Model(&User{}).Offset((page - 1) * pageSize).Limit(pageSize).Find(&users).Error
+	err := d.db.Where(filter).Model(&User{}).Offset((page - 1) * pageSize).Limit(pageSize).Find(&users).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get users")
 	}
