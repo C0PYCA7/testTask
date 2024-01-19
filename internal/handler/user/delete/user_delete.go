@@ -1,17 +1,18 @@
 package delete
 
 import (
+	"errors"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"testTask/internal/database"
 	"testTask/internal/lib/response"
 )
 
 type Response struct {
-	response.Response
+	response.Response `json:"response"`
 }
 
 type DeleteUser interface {
@@ -24,7 +25,6 @@ func New(log *slog.Logger, deleteUser DeleteUser) http.HandlerFunc {
 
 		log = log.With(
 			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
 		)
 
 		userIdStr := chi.URLParam(r, "id")
@@ -32,17 +32,29 @@ func New(log *slog.Logger, deleteUser DeleteUser) http.HandlerFunc {
 		if userIdStr != "" {
 			userId, err := strconv.ParseInt(userIdStr, 10, 64)
 			if err != nil {
-				log.Error("invalid user ID ", err)
+				log.Error("invalid user ID", err)
 
 				render.JSON(w, r, "invalid user id")
 
 				return
 			}
-			log.Info("got user id ", slog.Int64("id", userId))
+			log.Debug("userID", userId)
 
 			err = deleteUser.DeleteUser(userId)
 			if err != nil {
-				log.Error("failed to delete user ", err)
+				if errors.Is(err, database.ErrUserNotFound) {
+
+					w.WriteHeader(http.StatusNotFound)
+
+					log.Error("user not found")
+
+					render.JSON(w, r, "user not found")
+
+					return
+				}
+				log.Error("failed to delete user", err)
+
+				w.WriteHeader(http.StatusInternalServerError)
 
 				render.JSON(w, r, "failed to delete user")
 

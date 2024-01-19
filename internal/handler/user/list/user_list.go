@@ -1,7 +1,6 @@
 package list
 
 import (
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"log/slog"
 	"net/http"
@@ -11,18 +10,9 @@ import (
 	"testTask/internal/models"
 )
 
-//type Request struct {
-//	Name        string `json:"name,omitempty"`
-//	Surname     string `json:"surname,omitempty"`
-//	Patronymic  string `json:"patronymic,omitempty"`
-//	Age         int    `json:"age,omitempty"`
-//	Gender      string `json:"gender,omitempty"`
-//	Nationality string `json:"nationality,omitempty"`
-//}
-
 type Response struct {
-	Users []postgres.User `json:"users"`
-	response.Response
+	Users             []postgres.User `json:"users"`
+	response.Response `json:"response"`
 }
 
 type GetUsers interface {
@@ -35,7 +25,6 @@ func New(log *slog.Logger, getUsers GetUsers) http.HandlerFunc {
 
 		log = log.With(
 			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
 		)
 
 		var age int
@@ -51,6 +40,7 @@ func New(log *slog.Logger, getUsers GetUsers) http.HandlerFunc {
 				return
 			}
 		}
+		log.Debug("age", age)
 
 		filter := models.Filter{
 			Name:        r.URL.Query().Get("name"),
@@ -61,24 +51,37 @@ func New(log *slog.Logger, getUsers GetUsers) http.HandlerFunc {
 			Nationality: r.URL.Query().Get("nationality"),
 		}
 
+		log.Debug("user data", slog.Any("data", filter))
+
+		var pageSize int
 		pageSizeStr := r.URL.Query().Get("size")
-		pageSize, err := strconv.Atoi(pageSizeStr)
-		if err != nil {
-			log.Error("failed to parse size")
+		if pageSizeStr != "" {
+			var err error
+			pageSize, err = strconv.Atoi(pageSizeStr)
+			if err != nil {
+				log.Error("failed to parse size")
 
-			render.JSON(w, r, "failed to parse size")
+				render.JSON(w, r, "failed to parse size")
 
-			return
+				return
+			}
 		}
+		log.Debug("pageSize", pageSize)
+
+		var page int
 		pageStr := r.URL.Query().Get("page")
-		page, err := strconv.Atoi(pageStr)
-		if err != nil {
-			log.Error("failed to parse page")
+		if pageStr != "" {
+			var err error
+			page, err = strconv.Atoi(pageStr)
+			if err != nil {
+				log.Error("failed to parse page")
 
-			render.JSON(w, r, "failed to parse page")
+				render.JSON(w, r, "failed to parse page")
 
-			return
+				return
+			}
 		}
+		log.Debug("page", page)
 
 		users, err := getUsers.GetUsers(filter, pageSize, page)
 		if err != nil {

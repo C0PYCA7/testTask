@@ -5,20 +5,10 @@ type Response struct {
 	Error  string `json:"error,omitempty"`
 }
 
-const (
-	StatusOk    = "OK"
-	StatusError = "Error"
-)
+const StatusOk = "OK"
 
 func OK() Response {
 	return Response{
 		Status: StatusOk,
-	}
-}
-
-func Error(msg string) Response {
-	return Response{
-		Status: StatusError,
-		Error:  msg,
 	}
 }

@@ -5,19 +5,19 @@ import (
 	_ "github.com/lib/pq"
 	_ "gorm.io/driver/postgres"
 	_ "gorm.io/gorm"
+	"testTask/internal/database"
 	"testTask/internal/handler/user/update"
 	"testTask/internal/models"
 )
 
-// todo: 255 -> ?
 type User struct {
 	ID          int64  `gorm:"primaryKey;type:serial"`
-	Name        string `gorm:"not null;type:varchar(255)"`
-	Surname     string `gorm:"not null;type:varchar(255)"`
-	Patronymic  string `gorm:"type:varchar(255)"`
+	Name        string `gorm:"not null;type:varchar(50)"`
+	Surname     string `gorm:"not null;type:varchar(50)"`
+	Patronymic  string `gorm:"type:varchar(50)"`
 	Age         int    `gorm:"not null;type:integer"`
-	Gender      string `gorm:"not null;type:varchar(255)"`
-	Nationality string `gorm:"not null;type:varchar(255)"`
+	Gender      string `gorm:"not null;type:varchar(50)"`
+	Nationality string `gorm:"not null;type:varchar(50)"`
 }
 
 func (d *Database) Migrate() error {
@@ -30,20 +30,11 @@ func (d *Database) Migrate() error {
 	return nil
 }
 
-func (d *Database) CreateUser(name, surname, patronymic, nationalize, gender string, age int) (int64, error) {
+func (d *Database) CreateUser(user *User) (int64, error) {
 
 	const op = "database/postgres/postgres/CreateUser"
 
-	user := &User{
-		Name:        name,
-		Surname:     surname,
-		Patronymic:  patronymic,
-		Age:         age,
-		Gender:      gender,
-		Nationality: nationalize,
-	}
-
-	err := d.db.Create(user).Error
+	err := d.db.Create(&user).Error
 	if err != nil {
 		return 0, fmt.Errorf("%s: failed to create user: %w", op, err)
 	}
@@ -55,39 +46,45 @@ func (d *Database) DeleteUser(id int64) error {
 
 	user := &User{ID: id}
 
-	err := d.db.Delete(user).Error
-	if err != nil {
-		return fmt.Errorf("%s: failed to delete user: %w", op, err)
+	results := d.db.Delete(user)
+	if results.Error != nil {
+		return fmt.Errorf("%s: %w", op, database.ErrInternal)
+	}
+	if results.RowsAffected == 0 {
+		return fmt.Errorf("%s: %w", op, database.ErrUserNotFound)
+	}
+	return nil
+}
+
+func (d *Database) UpdateUser(id int64, request update.Request) error {
+	const op = "database/postgres/postgres/UpdateUser"
+	user := &User{ID: id}
+
+	results := d.db.Model(user).Updates(request)
+	if results.RowsAffected == 0 {
+		return fmt.Errorf("%s: %w", op, database.ErrUserNotFound)
+	}
+	if results.Error != nil {
+		return fmt.Errorf("%s: %w", op, database.ErrInternal)
 	}
 
 	return nil
 }
 
-func (d *Database) UpdateUser(id int64, request update.Request) (int64, error) {
-	const op = "database/postgres/postgres/UpdateUser"
-	user := &User{
-		ID:          id,
-		Name:        request.Name,
-		Surname:     request.Surname,
-		Patronymic:  request.Patronymic,
-		Age:         request.Age,
-		Gender:      request.Gender,
-		Nationality: request.Nationality,
-	}
-
-	err := d.db.Save(user).Error
-	if err != nil {
-		return 0, fmt.Errorf("%s: failed to update user: %w", op, err)
-	}
-
-	return 0, nil
-}
-
 func (d *Database) GetUsers(filter models.Filter, pageSize, page int) ([]User, error) {
 	var users []User
-	err := d.db.Where(filter).Model(&User{}).Offset((page - 1) * pageSize).Limit(pageSize).Find(&users).Error
-	if err != nil {
-		return nil, fmt.Errorf("failed to get users")
+
+	if page == 0 && pageSize == 0 {
+		err := d.db.Where(filter).Model(&User{}).Find(&users).Error
+		if err != nil {
+			return nil, fmt.Errorf("failed to get users")
+		}
+	} else {
+		err := d.db.Where(filter).Model(&User{}).Offset((page - 1) * pageSize).Limit(pageSize).Find(&users).Error
+		if err != nil {
+			return nil, fmt.Errorf("failed to get users")
+		}
 	}
+
 	return users, nil
 }

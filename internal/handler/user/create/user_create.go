@@ -2,11 +2,11 @@ package create
 
 import (
 	"fmt"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"log/slog"
 	"net/http"
+	"testTask/internal/database/postgres"
 	"testTask/internal/lib/response"
 )
 
@@ -17,8 +17,8 @@ type Request struct {
 }
 
 type Response struct {
-	Id int64 `json:"id"`
-	response.Response
+	Id                int64 `json:"id"`
+	response.Response `json:"response"`
 }
 
 type AgeResponse struct {
@@ -45,9 +45,8 @@ type CountryDetail struct {
 	Probability float64 `json:"probability"`
 }
 
-// todo: может быть создать структуру и записывать в нее реквесты и респорсы и передавать ее а не поля по отдельности
 type CreateUser interface {
-	CreateUser(name, surname, patronymic, nationality, gender string, age int) (int64, error)
+	CreateUser(user *postgres.User) (int64, error)
 }
 
 func New(log *slog.Logger, createUser CreateUser) http.HandlerFunc {
@@ -56,7 +55,6 @@ func New(log *slog.Logger, createUser CreateUser) http.HandlerFunc {
 
 		log = log.With(
 			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
 		)
 
 		var req Request
@@ -64,12 +62,14 @@ func New(log *slog.Logger, createUser CreateUser) http.HandlerFunc {
 		if err := render.DecodeJSON(r.Body, &req); err != nil {
 			log.Error("failed to decode request body: ", err)
 
-			render.JSON(w, r, response.Error("failed to decode request body"))
+			render.JSON(w, r, "failed to decode request body")
 
 			return
 		}
 
 		log.Info("request body decoded")
+
+		log.Debug("request data from user", slog.Any("req", req))
 
 		if err := validator.New().Struct(req); err != nil {
 			log.Error("invalid request: ", err)
@@ -79,38 +79,60 @@ func New(log *slog.Logger, createUser CreateUser) http.HandlerFunc {
 			return
 		}
 
-		userAge, err := enrichUserAge(&req)
-		if err != nil {
-			log.Error("failed to get user age")
+		ageCh := make(chan *AgeResponse)
+		genderCh := make(chan *GenderResponse)
+		nationalityCh := make(chan *NationalityResponse)
 
-			render.JSON(w, r, "failed to get user data")
+		go func() {
+			ageData, err := enrichUserAge(&req)
+			if err != nil {
+				log.Error("failed to get user age")
+				ageCh <- nil
+			} else {
+				ageCh <- ageData
+			}
+		}()
 
-			return
-		}
+		go func() {
+			genderData, err := enrichUserGender(&req)
+			if err != nil {
+				log.Error("failed to get user gender")
+				genderCh <- nil
+			} else {
+				genderCh <- genderData
+			}
+		}()
 
-		userGender, err := enrichUserGender(&req)
-		if err != nil {
-			log.Error("failed to det user gender")
+		go func() {
+			nationalityData, err := enrichUserNationality(&req)
+			if err != nil {
+				log.Error("failed to get user nationality")
+				nationalityCh <- nil
+			} else {
+				nationalityCh <- nationalityData
+			}
+		}()
 
-			render.JSON(w, r, "failed to get user gender")
-
-			return
-		}
-
-		userNationality, err := enrichUserNationality(&req)
-		if err != nil {
-			log.Error("failed to det user gender")
-
-			render.JSON(w, r, "failed to get user gender")
-
-			return
-		}
+		userAge := <-ageCh
+		userGender := <-genderCh
+		userNationality := <-nationalityCh
 
 		nationality := GetMaxProbabilityNationality(userNationality)
 
-		id, err := createUser.CreateUser(req.Name, req.Surname, req.Patronymic, nationality, userGender.Gender, userAge.Age)
+		log.Debug("data from other API", slog.Any("age", userAge), slog.Any("gender", userGender), slog.Any("nationality", nationality))
+
+		user := postgres.User{
+			Name:        req.Name,
+			Surname:     req.Surname,
+			Patronymic:  req.Patronymic,
+			Age:         userAge.Age,
+			Gender:      userGender.Gender,
+			Nationality: nationality,
+		}
+
+		id, err := createUser.CreateUser(&user)
 		if err != nil {
-			log.Error("failed to add user ", err)
+			log.Error("failed to add user", err)
 
 			render.JSON(w, r, "failed to add user")
 
