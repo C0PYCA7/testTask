@@ -12,7 +12,8 @@ import (
 )
 
 type Response struct {
-	response.Response `json:"response"`
+	ID int64 `json:"userID"`
+	response.Response
 }
 
 type DeleteUser interface {
@@ -63,7 +64,10 @@ func New(log *slog.Logger, deleteUser DeleteUser) http.HandlerFunc {
 
 			log.Info("user delete")
 
-			render.JSON(w, r, response.OK())
+			render.JSON(w, r, Response{
+				ID:       userId,
+				Response: response.OK(),
+			})
 
 		} else {
 			log.Error("empty user ID")

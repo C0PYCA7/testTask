@@ -11,8 +11,8 @@ import (
 )
 
 type Response struct {
-	Users             []postgres.User `json:"users"`
-	response.Response `json:"response"`
+	Users []postgres.User `json:"users"`
+	response.Response
 }
 
 type GetUsers interface {

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testTask/internal/database/postgres"
 	"testTask/internal/lib/response"
+	"testTask/internal/models"
 )
 
 type Request struct {
@@ -17,32 +18,8 @@ type Request struct {
 }
 
 type Response struct {
-	Id                int64 `json:"id"`
-	response.Response `json:"response"`
-}
-
-type AgeResponse struct {
-	Count int    `json:"count"`
-	Name  string `json:"name"`
-	Age   int    `json:"age"`
-}
-
-type GenderResponse struct {
-	Count       int     `json:"count"`
-	Name        string  `json:"name"`
-	Gender      string  `json:"gender"`
-	Probability float64 `json:"probability"`
-}
-
-type NationalityResponse struct {
-	Count   int             `json:"count"`
-	Name    string          `json:"name"`
-	Country []CountryDetail `json:"country"`
-}
-
-type CountryDetail struct {
-	CountryID   string  `json:"country_id"`
-	Probability float64 `json:"probability"`
+	Id int64 `json:"id"`
+	response.Response
 }
 
 type CreateUser interface {
@@ -79,9 +56,9 @@ func New(log *slog.Logger, createUser CreateUser) http.HandlerFunc {
 			return
 		}
 
-		ageCh := make(chan *AgeResponse)
-		genderCh := make(chan *GenderResponse)
-		nationalityCh := make(chan *NationalityResponse)
+		ageCh := make(chan *models.AgeResponse)
+		genderCh := make(chan *models.GenderResponse)
+		nationalityCh := make(chan *models.NationalityResponse)
 
 		go func() {
 			ageData, err := enrichUserAge(&req)
@@ -148,7 +125,7 @@ func New(log *slog.Logger, createUser CreateUser) http.HandlerFunc {
 	}
 }
 
-func enrichUserAge(req *Request) (*AgeResponse, error) {
+func enrichUserAge(req *Request) (*models.AgeResponse, error) {
 
 	const op = "user/create/user_create/enrichUserAge"
 
@@ -159,7 +136,7 @@ func enrichUserAge(req *Request) (*AgeResponse, error) {
 	}
 	defer agifyResp.Body.Close()
 
-	var ageData AgeResponse
+	var ageData models.AgeResponse
 
 	if err := render.DecodeJSON(agifyResp.Body, &ageData); err != nil {
 		return nil, fmt.Errorf("%s: failed to decode response body: %w", op, err)
@@ -167,7 +144,7 @@ func enrichUserAge(req *Request) (*AgeResponse, error) {
 	return &ageData, nil
 }
 
-func enrichUserGender(req *Request) (*GenderResponse, error) {
+func enrichUserGender(req *Request) (*models.GenderResponse, error) {
 	const op = "user/create/user_create/enrichUserGender"
 
 	genderUrl := fmt.Sprintf("https://api.genderize.io/?name=%s", req.Name)
@@ -177,7 +154,7 @@ func enrichUserGender(req *Request) (*GenderResponse, error) {
 	}
 	defer agifyResp.Body.Close()
 
-	var genderData GenderResponse
+	var genderData models.GenderResponse
 
 	if err := render.DecodeJSON(agifyResp.Body, &genderData); err != nil {
 		return nil, fmt.Errorf("%s: failed to decode response body: %w", op, err)
@@ -185,7 +162,7 @@ func enrichUserGender(req *Request) (*GenderResponse, error) {
 	return &genderData, nil
 }
 
-func enrichUserNationality(req *Request) (*NationalityResponse, error) {
+func enrichUserNationality(req *Request) (*models.NationalityResponse, error) {
 	const op = "user/create/user_create/enrichUserNationality"
 
 	nationalityUrl := fmt.Sprintf("https://api.nationalize.io/?name=%s", req.Name)
@@ -196,7 +173,7 @@ func enrichUserNationality(req *Request) (*NationalityResponse, error) {
 	}
 	defer agifyResp.Body.Close()
 
-	var nationalityData NationalityResponse
+	var nationalityData models.NationalityResponse
 
 	if err := render.DecodeJSON(agifyResp.Body, &nationalityData); err != nil {
 		return nil, fmt.Errorf("%s: failed to decode response body: %w", op, err)
@@ -204,7 +181,7 @@ func enrichUserNationality(req *Request) (*NationalityResponse, error) {
 	return &nationalityData, nil
 }
 
-func GetMaxProbabilityNationality(nationalResponse *NationalityResponse) string {
+func GetMaxProbabilityNationality(nationalResponse *models.NationalityResponse) string {
 
 	maxProbability := nationalResponse.Country[0].Probability
 	maxCountry := nationalResponse.Country[0].CountryID

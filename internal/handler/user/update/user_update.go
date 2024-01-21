@@ -21,8 +21,8 @@ type Request struct {
 }
 
 type Response struct {
-	ID                int64 `json:"id"`
-	response.Response `json:"response"`
+	ID int64 `json:"id"`
+	response.Response
 }
 
 type UserUpdate interface {
@@ -84,7 +84,10 @@ func New(log *slog.Logger, userUpdate UserUpdate) http.HandlerFunc {
 
 			log.Info("update user", slog.Int64("id", userId))
 
-			render.JSON(w, r, response.OK())
+			render.JSON(w, r, Response{
+				ID:       userId,
+				Response: response.OK(),
+			})
 		} else {
 			log.Error("empty user ID")
 
