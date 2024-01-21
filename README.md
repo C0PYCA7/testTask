@@ -18,23 +18,23 @@
 - `GET /people`: Получение списка людей с различными фильтрами и пагинацией.
 
 ### Управление данными
-- `POST /people`: Добавление нового человека в формате JSON.
-- `PUT /people/{id}`: Изменение информации о человеке по идентификатору.
-- `DELETE /people/{id}`: Удаление человека по идентификатору.
+- `POST /create`: Добавление нового человека в формате JSON.
+- `PUT /update/{id}`: Изменение информации о человеке по идентификатору.
+- `DELETE /delete/{id}`: Удаление человека по идентификатору.
 
 ### Пример использования сервиса
-- `GET curl --location 'http://localhost:8080/list'`
-- `GET(с фильтрами и пагинацией) curl --location 'http://localhost:8080/list?size=10&nationality=RU&page=1' \
+- `GET curl --location 'http://localhost:8080/people'`
+- `GET(с фильтрами и пагинацией) curl --location 'http://localhost:8080/people?size=10&nationality=RU&page=1' \
   --data ''`
-- `POST curl --location 'http://localhost:8080/create' \
+- `POST curl --location 'http://localhost:8080/people' \
   --header 'Content-Type: text/plain' \
   --header 'Authorization: Basic cm9vdDpyb290' \
   --data '{
-  "name": "Dmitriy",
+  "name": "tolik",
   "surname": "Ushakov",
   "patronymic": "Vasilevich"
   }'`
-- `PUT curl --location --request PUT 'http://localhost:8080/update/30' \
+- `PUT curl --location --request PUT 'http://localhost:8080/people/23' \
   --header 'Content-Type: application/json' \
   --data '{
   "name": "Sergey",
@@ -45,7 +45,7 @@
   "age": 19
   }
   '`
-- `DELETE curl --location --request DELETE 'http://localhost:8080/delete/1'`
+- `DELETE curl --location --request DELETE 'http://localhost:8080/people/26'`
 
 ## Обогащение данных
 

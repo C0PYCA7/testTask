@@ -10,7 +10,7 @@ import (
 	"testTask/internal/database/postgres"
 	"testTask/internal/handler/user/create"
 	delete2 "testTask/internal/handler/user/delete"
-	"testTask/internal/handler/user/list"
+	"testTask/internal/handler/user/get"
 	"testTask/internal/handler/user/update"
 )
 
@@ -37,10 +37,10 @@ func main() {
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
 
-	router.Post("/create", create.New(log, database))
-	router.Delete("/delete/{id}", delete2.New(log, database))
-	router.Put("/update/{id}", update.New(log, database))
-	router.Get("/list", list.New(log, database))
+	router.Post("/people", create.New(log, database))
+	router.Delete("/people/{id}", delete2.New(log, database))
+	router.Put("/people/{id}", update.New(log, database))
+	router.Get("/people", get.New(log, database))
 
 	log.Info("starting server", slog.String("address", cfg.Server.Address))
 

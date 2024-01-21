@@ -1,4 +1,4 @@
-package list
+package get
 
 import (
 	"github.com/go-chi/render"
@@ -21,7 +21,7 @@ type GetUsers interface {
 
 func New(log *slog.Logger, getUsers GetUsers) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handler/user/list/user_list/New"
+		const op = "handler/user/get/user_list/New"
 
 		log = log.With(
 			slog.String("op", op),
