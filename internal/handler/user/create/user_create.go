@@ -95,6 +95,13 @@ func New(log *slog.Logger, createUser CreateUser) http.HandlerFunc {
 		userNationality := <-nationalityCh
 
 		nationality := GetMaxProbabilityNationality(userNationality)
+		if nationality == "" || userGender == nil || userAge == nil {
+			log.Info("empty user data")
+
+			render.JSON(w, r, "empty data")
+
+			return
+		}
 
 		log.Debug("data from other API", slog.Any("age", userAge), slog.Any("gender", userGender), slog.Any("nationality", nationality))
 
@@ -182,6 +189,10 @@ func enrichUserNationality(req *Request) (*models.NationalityResponse, error) {
 }
 
 func GetMaxProbabilityNationality(nationalResponse *models.NationalityResponse) string {
+
+	if len(nationalResponse.Country) == 0 {
+		return ""
+	}
 
 	maxProbability := nationalResponse.Country[0].Probability
 	maxCountry := nationalResponse.Country[0].CountryID
