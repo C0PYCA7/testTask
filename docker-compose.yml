@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+  web:
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      POSTGRES_PASSWORD: 1977
+      POSTGRES_USER: postgres
+      POSTGRES_DB: test_task
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    depends_on:
+      - db
+    volumes:
+      - /Users/andrejivakin/IdeaProjects/eff_mob_docker/page.html:/app/html
+    networks:
+      - net
+
+
+  db:
+    restart: on-failure
+    image: postgres:latest
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: 1977
+      POSTGRES_USER: postgres
+      POSTGRES_DB: test_task
+    ports:
+      - "5433:5432"
+    networks:
+      - net
+
+volumes:
+  postgres_data:
+networks:
+  net:

@@ -60,7 +60,7 @@ func New(log *slog.Logger, userUpdate UserUpdate) http.HandlerFunc {
 				return
 			}
 
-			log.Debug("userID", userId)
+			log.Debug("userID", slog.Any("Id", userId))
 
 			err = userUpdate.UpdateUser(userId, req)
 			if err != nil {

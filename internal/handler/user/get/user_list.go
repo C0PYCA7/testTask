@@ -40,7 +40,7 @@ func New(log *slog.Logger, getUsers GetUsers) http.HandlerFunc {
 				return
 			}
 		}
-		log.Debug("age", age)
+		log.Debug("age", slog.Any("age", age))
 
 		filter := models.Filter{
 			Name:        r.URL.Query().Get("name"),
@@ -66,7 +66,7 @@ func New(log *slog.Logger, getUsers GetUsers) http.HandlerFunc {
 				return
 			}
 		}
-		log.Debug("pageSize", pageSize)
+		log.Debug("pageSize", slog.Any("limit", pageSize))
 
 		var page int
 		pageStr := r.URL.Query().Get("page")
@@ -81,7 +81,7 @@ func New(log *slog.Logger, getUsers GetUsers) http.HandlerFunc {
 				return
 			}
 		}
-		log.Debug("page", page)
+		log.Debug("page", slog.Any("offset", page))
 
 		users, err := getUsers.GetUsers(filter, pageSize, page)
 		if err != nil {

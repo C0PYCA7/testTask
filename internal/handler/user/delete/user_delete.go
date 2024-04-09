@@ -39,7 +39,7 @@ func New(log *slog.Logger, deleteUser DeleteUser) http.HandlerFunc {
 
 				return
 			}
-			log.Debug("userID", userId)
+			log.Debug("userID", slog.Any("id", userId))
 
 			err = deleteUser.DeleteUser(userId)
 			if err != nil {
